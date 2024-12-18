@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PAE Tutorial</title>
+  <!-- Prism.js for Syntax Highlighting -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.28.0/themes/prism.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 20px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+
+    h1, h2, h3 {
+      color: #444;
+    }
+
+    code {
+      font-family: Consolas, monospace;
+      color: #c7254e;
+      background-color: #f9f2f4;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    pre {
+      background-color: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 10px;
+      overflow-x: auto;
+    }
+
+    ul, ol {
+      margin-left: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Tutorial: Generating Predicted Aligned Error (PAE) Plots from AlphaFold Output Files</h1>
+
+  <h2>Introduction to PAE</h2>
+  <p>
+    The <strong>Predicted Aligned Error (PAE)</strong> is a critical output from AlphaFold that estimates the 
+    pairwise confidence of residue positions within a predicted protein structure. Unlike <strong>pLDDT</strong>, 
+    which provides confidence scores for individual residues, the PAE matrix gives insight into the relative 
+    accuracy between all pairs of residues. This is particularly useful for assessing domain packing, identifying 
+    flexible regions, or validating inter-domain orientations in complex proteins.
+  </p>
+
+  <h2>How AlphaFold Produces <code>.pkl</code> Files</h2>
+  <p>
+    When AlphaFold predicts protein structures, it outputs several result files, including <code>.pkl</code> 
+    files (e.g., <code>result_model_1_pred_0.pkl</code>). These files contain a nested dictionary of various 
+    data arrays, including:
+  </p>
+  <ul>
+    <li><strong><code>plddt</code></strong>: Per-residue confidence scores (0–100).</li>
+    <li><strong><code>distogram</code></strong>: Pairwise distance probabilities.</li>
+    <li><strong><code>predicted_aligned_error</code></strong>: A matrix of pairwise alignment errors, essential 
+      for PAE visualization (only generated when using pTM models like <code>monomer_ptm</code> or 
+      <code>multimer</code>).</li>
+  </ul>
+  <p>
+    The PAE matrix is stored in the <code>predicted_aligned_error</code> key of the <code>.pkl</code> file 
+    and can be visualized to evaluate confidence in relative residue positioning. Below is a Python script 
+    that takes AlphaFold-generated <code>.pkl</code> files as input and generates PAE plots.
+  </p>
+
+  <h2>Steps to Generate PAE Plots</h2>
+  <ol>
+    <li>Ensure you have Python installed with required libraries: <code>numpy</code>, <code>matplotlib</code>.</li>
+    <li>Run the script below with the folder containing your AlphaFold <code>.pkl</code> files as input.</li>
+    <li>The script will extract the PAE matrix and save it as high-resolution images.</li>
+  </ol>
+
+  <h2>Python Code</h2>
+  <pre><code class="language-python">import os
+import pickle
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Path to the AlphaFold output directory containing the .pkl files
+result_folder = "path_to_your_pkl_files"  # Update with the directory containing .pkl files
+
+# Path to save the PAE plots
+output_dir = os.path.join(result_folder, "PAE_Plots")
+os.makedirs(output_dir, exist_ok=True)  # Create the output directory if it doesn't exist
+
+# Function to plot the PAE matrix
+def plot_pae(pae_matrix, model_name, output_path):
+    plt.figure(figsize=(8, 6))
+    plt.imshow(pae_matrix, cmap="bwr", interpolation="nearest", vmin=0, vmax=30)
+    plt.colorbar(label="Predicted Aligned Error (Å)")
+    plt.title(f"Predicted Aligned Error (PAE) - {model_name}")
+    plt.xlabel("Residue Index")
+    plt.ylabel("Residue Index")
+    plt.savefig(output_path, dpi=300)
+    plt.close()
+
+# Process each result_model_*_pred_0.pkl file
+for file in os.listdir(result_folder):
+    if file.startswith("result_model") and file.endswith(".pkl"):
+        file_path = os.path.join(result_folder, file)
+
+        # Load the .pkl file
+        with open(file_path, "rb") as f:
+            data = pickle.load(f)
+
+        # Check if the "predicted_aligned_error" key exists
+        if "predicted_aligned_error" in data:
+            pae_matrix = np.array(data["predicted_aligned_error"])  # Extract the PAE matrix
+            model_name = os.path.splitext(file)[0]  # Use the filename as the model name
+
+            # Define the output path for the PAE plot
+            output_path = os.path.join(output_dir, f"{model_name}_pae_plot.png")
+
+            # Plot and save the PAE matrix
+            plot_pae(pae_matrix, model_name, output_path)
+            print(f"PAE plot saved: {output_path}")
+        else:
+            print(f"No PAE data found in: {file}")
+
+print("PAE plot generation completed.")</code></pre>
+
+  <h2>Conclusion</h2>
+  <p>
+    This tutorial guides you through generating Predicted Aligned Error (PAE) plots using AlphaFold's 
+    <code>.pkl</code> files. The Python script automates the extraction of the PAE matrix and creates 
+    high-resolution visualizations to assess residue pair confidence within predicted protein structures.
+  </p>
+
+  <!-- Prism.js Script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.28.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.28.0/components/prism-python.min.js"></script>
+</body>
+</html>
